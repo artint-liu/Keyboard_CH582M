@@ -30,6 +30,18 @@ uint8_t trigB;
 // SCAN_PL   PA14
 // SCAN_MISO PA15
 
+uint8_t ReadScan()
+{
+    GPIOA_ResetBits(GPIO_Pin_14);
+    GPIOA_SetBits(GPIO_Pin_14);
+
+    GPIOA_ResetBits(GPIO_Pin_12);
+    uint8_t db = SPI0_MasterRecvByte();
+    GPIOA_SetBits(GPIO_Pin_12);
+    return db;
+}
+
+
 /*********************************************************************
  * @fn      main
  *
@@ -42,6 +54,22 @@ int main()
     uint8_t len;
 
     SetSysClock(CLK_SOURCE_PLL_60MHz);
+
+    GPIOA_ModeCfg(GPIO_Pin_14, GPIO_ModeOut_PP_5mA);
+    GPIOA_SetBits(GPIO_Pin_14);
+
+    // SPI0
+    GPIOA_SetBits(GPIO_Pin_12 | GPIO_Pin_13);
+    GPIOA_ModeCfg(GPIO_Pin_12 | GPIO_Pin_13, GPIO_ModeOut_PP_5mA);
+    GPIOA_SetBits(GPIO_Pin_15);
+    GPIOA_ModeCfg(GPIO_Pin_15, GPIO_ModeIN_PU);
+    //GPIOA_ModeCfg(GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_15, GPIO_ModeIN_PU);
+    SPI0_MasterDefInit();
+
+    SPI0_DataMode( Mode3_HighBitINFront ); //582m 只支持0、3模式
+    SPI0_CLKCfg( 60 );  //先降低SPI速率
+
+
 
     /* 配置串口1：先配置IO口模式，再配置串口 */
 //    GPIOA_SetBits(GPIO_Pin_9);
@@ -85,14 +113,14 @@ int main()
     }
 
     WS2812_Show();
-    DelayMs(1000);
+    DelayMs(500);
 
     for(int i = 0; i < NUM_PIXEL; i++)
     {
         WS2812_Clear();
-        WS2812_SetPixel(i, 0, 0, 20);
+        WS2812_SetPixel(i, 20, 0, 20);
         WS2812_Show();
-        DelayMs(1000);
+        DelayMs(100);
     }
 
     WS2812_Clear();
@@ -100,7 +128,17 @@ int main()
 
     while(1)
     {
-        DelayMs(100);
+        DelayMs(10);
+        uint8_t db = ReadScan() ^ 0xff;
+        WS2812_Clear();
+        for(int i = 0; i < NUM_PIXEL; i++)
+        {
+            if((0x80 >> i) & db)
+            {
+                WS2812_SetPixel(i, 20, 0, 0);
+            }
+        }
+        WS2812_Show();
     }
 }
 
