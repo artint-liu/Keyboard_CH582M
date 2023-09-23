@@ -25,7 +25,7 @@
 #define T0 HIGH; DST; LOW; DLT
 #define T1 HIGH; DLT; LOW; DST
 
-#define RESET LOW; DelayUs(300)
+#define RESET LOW; DelayUs(500)
 
 static uint8_t pixels[NUM_PIXEL * 3] = {
         0x20, 0, 0, 0x20, 0, 0, 0x20, 0, 0, 0x20, 0, 0,
@@ -85,8 +85,8 @@ void WS2812_SetPixel(uint16_t index, uint8_t r, uint8_t g, uint8_t b)
 {
     if(index < NUM_PIXEL)
     {
-        pixels[index * 3 + 0] = r;
-        pixels[index * 3 + 1] = g;
+        pixels[index * 3 + 0] = g;
+        pixels[index * 3 + 1] = r;
         pixels[index * 3 + 2] = b;
     }
 }
