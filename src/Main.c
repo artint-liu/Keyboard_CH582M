@@ -12,12 +12,15 @@
 
 #include "CH58x_common.h"
 #include "WS2812.h"
+#include "HID_Key.h"
 
 uint8_t TxBuff[] = "This is a tx exam\r\n";
 uint8_t RxBuff[100];
 uint8_t trigB;
 
-
+int InitUSBHID();
+void DevHIDKeyReport(uint8_t key);
+void USB_DevTransProcess( void );
 
 // LED     PB0
 // DIN     PB8
@@ -65,6 +68,29 @@ int main()
     uint8_t len;
 
     SetSysClock(CLK_SOURCE_PLL_60MHz);
+
+#if 1
+    InitUSBHID();
+#else
+    DebugInit();
+
+    pEP0_RAM_Addr = EP0_Databuf;
+    pEP1_RAM_Addr = EP1_Databuf;
+    pEP2_RAM_Addr = EP2_Databuf;
+    pEP3_RAM_Addr = EP3_Databuf;
+
+    USB_DeviceInit();
+
+    PFIC_EnableIRQ( USB_IRQn );
+
+    while( 1 )
+    {
+      DevHIDKeyReport(4);
+      DelayMs(10);
+      DevHIDKeyReport(0);
+      DelayMs(5000);
+    }
+#endif
 
     // SPI0
     GPIOA_SetBits(GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14);
@@ -137,6 +163,7 @@ int main()
 
     while(1)
     {
+#if 1
         DelayMs(10);
         uint8_t db = ReadScan() ^ 0xff;
         WS2812_Clear();
@@ -145,9 +172,18 @@ int main()
             if((0x80 >> i) & db)
             {
                 WS2812_SetPixel(i, 0, 20, 0);
+                DevHIDKeyReport(HID_KEY_X);
+                DelayMs(10);
+                DevHIDKeyReport(0);
             }
         }
         WS2812_Show();
+#else
+        DevHIDKeyReport(4);
+        DelayMs(10);
+        DevHIDKeyReport(0);
+        DelayMs(5000);
+#endif
     }
 }
 
@@ -194,4 +230,11 @@ void UART1_IRQHandler(void)
         default:
             break;
     }
+}
+
+__INTERRUPT
+__HIGH_CODE
+void USB_IRQHandler( void ) /* USB中断服务程序,使用寄存器组1 */
+{
+  USB_DevTransProcess();
 }
