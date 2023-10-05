@@ -19,7 +19,10 @@ uint8_t RxBuff[100];
 uint8_t trigB;
 
 int InitUSBHID();
+void DevHIDKeyClear();
 void DevHIDKeyReport(uint8_t key);
+void DevHIDKeyReportKeys(uint8_t* keys);
+void DevHIDKeyReportEnd();
 void USB_DevTransProcess( void );
 
 // LED     PB0
@@ -32,6 +35,31 @@ void USB_DevTransProcess( void );
 // SCAN_CLK  PA13
 // SCAN_PL   PA14
 // SCAN_MISO PA15
+
+// bit 7   bit 6   bit 5   bit 4   bit 3   bit 2   bit 1   bit 0
+// R Win   R Shift R Alt   R Ctrl  L Win   L Shift L Alt   L Ctrl
+
+#define MOD_RWin    (1 << 7)
+#define MOD_RAlt    (1 << 6)
+#define MOD_RShift  (1 << 5)
+#define MOD_RCtrl   (1 << 4)
+#define MOD_LWin    (1 << 3)
+#define MOD_LAlt    (1 << 2)
+#define MOD_LShift  (1 << 1)
+#define MOD_LCtrl   (1 << 0)
+
+uint8_t keydef[8][6] = {
+        {MOD_LCtrl, HID_KEY_S, 0},
+        {0, HID_KEY_F7, 0},
+        {MOD_LShift, HID_KEY_BRACKET_LEFT, 0},
+        {MOD_LShift, HID_KEY_BRACKET_RIGHT, 0},
+        {MOD_LCtrl, HID_KEY_Z, 0},
+        {MOD_LCtrl, HID_KEY_X, 0},
+        {MOD_LCtrl, HID_KEY_C, 0},
+        {MOD_LCtrl, HID_KEY_V, 0},
+};
+
+uint8_t dbPrevKeys = 0;
 
 uint8_t ReadScan()
 {
@@ -142,20 +170,20 @@ int main()
     for(int i = 0 ; i <5 ; i++)
     {
         GPIOB_SetBits(GPIO_Pin_0);
-        DelayMs(500);
+        DelayMs(100);
         GPIOB_ResetBits(GPIO_Pin_0);
-        DelayMs(500);
+        DelayMs(100);
     }
 
     WS2812_Show();
-    DelayMs(500);
+    DelayMs(200);
 
     for(int i = 0; i < NUM_PIXEL; i++)
     {
         WS2812_Clear();
-        WS2812_SetPixel(i, 20, 0, 20);
+        WS2812_SetPixel(i, 20, 20, 20);
         WS2812_Show();
-        DelayMs(100);
+        DelayMs(50);
     }
 
     WS2812_Clear();
@@ -166,18 +194,25 @@ int main()
 #if 1
         DelayMs(10);
         uint8_t db = ReadScan() ^ 0xff;
-        WS2812_Clear();
-        for(int i = 0; i < NUM_PIXEL; i++)
+        if(db != dbPrevKeys)
         {
-            if((0x80 >> i) & db)
+            dbPrevKeys = db;
+
+            WS2812_Clear();
+            DevHIDKeyClear();
+
+            for(int i = 0; i < NUM_PIXEL; i++)
             {
-                WS2812_SetPixel(i, 0, 20, 0);
-                DevHIDKeyReport(HID_KEY_X);
-                DelayMs(10);
-                DevHIDKeyReport(0);
+                if((0x80 >> i) & db)
+                {
+                    WS2812_SetPixel(i, 0, 20, 0);
+                    DevHIDKeyReportKeys(keydef[i]);
+                }
             }
+
+            DevHIDKeyReportEnd();
+            WS2812_Show();
         }
-        WS2812_Show();
 #else
         DevHIDKeyReport(4);
         DelayMs(10);

@@ -13,6 +13,7 @@
 const UINT8 MyDevDescr[] = { 0x12, 0x01, 0x10, 0x01, 0x00, 0x00, 0x00, DevEP0SIZE, 0x3d, 0x41, 0x07, 0x21, 0x00, 0x00,
                              0x00, 0x00, 0x00, 0x01 };
 // 配置描述符
+#if 1
 const UINT8 MyCfgDescr[] = { 0x09, 0x02, 0x3b, 0x00, 0x02, 0x01, 0x00, 0xA0, 0x32,             //配置描述符
                              0x09, 0x04, 0x00, 0x00, 0x01, 0x03, 0x01, 0x01, 0x00,             //接口描述符,键盘
                              0x09, 0x21, 0x11, 0x01, 0x00, 0x01, 0x22, 0x3e, 0x00,             //HID类描述符
@@ -20,8 +21,16 @@ const UINT8 MyCfgDescr[] = { 0x09, 0x02, 0x3b, 0x00, 0x02, 0x01, 0x00, 0xA0, 0x3
                              0x09, 0x04, 0x01, 0x00, 0x01, 0x03, 0x01, 0x02, 0x00,             //接口描述符,鼠标
                              0x09, 0x21, 0x10, 0x01, 0x00, 0x01, 0x22, 0x34, 0x00,             //HID类描述符
                              0x07, 0x05, 0x82, 0x03, 0x04, 0x00, 0x0a                        //端点描述符
+};
+#else
+// 报错
+const UINT8 MyCfgDescr[] = { 0x09, 0x02, 0x22, 0x00, 0x02, 0x01, 0x00, 0xA0, 0x32,             //配置描述符
+                             0x09, 0x04, 0x00, 0x00, 0x01, 0x03, 0x01, 0x01, 0x00,             //接口描述符,键盘
+                             0x09, 0x21, 0x11, 0x01, 0x00, 0x01, 0x22, 0x3e, 0x00,             //HID类描述符
+                             0x07, 0x05, 0x81, 0x03, 0x08, 0x00, 0x0a,                       //端点描述符
+};
+#endif
 
-    };
 // 语言描述符
 const UINT8 MyLangDescr[] = { 0x04, 0x03, 0x09, 0x04 };
 // 厂家信息
@@ -381,9 +390,56 @@ void DebugInit( void )
   UART1_DefInit();
 }
 
+void DevHIDKeyClear()
+{
+    for(int i = 0; i < sizeof(HIDKey); i++)
+    {
+        HIDKey[i] = 0;
+    }
+}
+
 void DevHIDKeyReport(uint8_t key)
 {
     HIDKey[2] = key;
+    memcpy(pEP1_IN_DataBuf, HIDKey, sizeof(HIDKey));
+    DevEP1_IN_Deal(sizeof(HIDKey));
+}
+
+
+void DevHIDKeyReportKeys(uint8_t* keys)
+{
+    //HIDKey[2] = key;
+    if(keys[0])
+    {
+        HIDKey[0] |= keys[0];
+    }
+    keys++;
+
+    while(*keys)
+    {
+        int i = 2;
+        for(; i < sizeof(HIDKey); i++)
+        {
+            if(HIDKey[i] == 0)
+            {
+                HIDKey[i] = *keys++;
+                break;
+            }
+            else if(*keys == HIDKey[i]) {
+                keys++;
+                break;
+            }
+        }
+
+        if(i == sizeof(HIDKey))
+        {
+            return;
+        }
+    }
+}
+
+void DevHIDKeyReportEnd()
+{
     memcpy(pEP1_IN_DataBuf, HIDKey, sizeof(HIDKey));
     DevEP1_IN_Deal(sizeof(HIDKey));
 }
