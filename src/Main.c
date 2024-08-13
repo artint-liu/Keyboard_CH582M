@@ -91,7 +91,7 @@ uint8_t ReadScan()
  *
  * @return  none
  */
-int main()
+int main1()
 {
     uint8_t len;
 
